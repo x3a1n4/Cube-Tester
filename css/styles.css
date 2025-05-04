@@ -121,7 +121,9 @@ button.open .chevron {
     font-size: 14px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     z-index: 1000; /* Ensure it appears above other elements */
-    display: none; /* Initially hidden */
+    display: flex;
+    flex-direction: column; /* Stack content vertically */
+    align-items: flex-start; /* Align items to the left */
 }
 
 #drawing-canvas {

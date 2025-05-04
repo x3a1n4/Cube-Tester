@@ -1,4 +1,4 @@
-const canvas = document.getElementById('drawing-canvas');
+// const canvas = document.getElementById('drawing-canvas');
 const ctx = canvas.getContext('2d');
 
 // Resize the canvas to fit the window
@@ -23,17 +23,17 @@ brushTexture.onload = () => {
 };
 
 // Start drawing
-canvas.addEventListener('mousedown', (e) => {
+canvas.addEventListener('pointerdown', (e) => {
     isDrawing = true;
     [lastX, lastY] = [e.offsetX, e.offsetY];
 });
 
 // Stop drawing
-canvas.addEventListener('mouseup', () => (isDrawing = false));
-canvas.addEventListener('mouseout', () => (isDrawing = false));
+canvas.addEventListener('pointerup', () => (isDrawing = false));
+canvas.addEventListener('pointerleave', () => (isDrawing = false));
 
 // Draw on the canvas
-canvas.addEventListener('mousemove', (e) => {
+canvas.addEventListener('pointermove', (e) => {
     if (!isDrawing) return;
 
     if (isBrushTextureLoaded && false) { // not in use, TODO
@@ -85,6 +85,48 @@ function drawEllipse(x, y, radiusX, radiusY, rotation = 0, color = 'blue', width
 function drawPlane(x, y, width, height, color = 'rgba(0, 0, 255, 0.2)') {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, width, height);
+}
+
+// Function to generate a random point within the canvas
+function generateRandomPoint() {
+    return {
+        x: Math.random() * (canvas.width - 350) + 300, // Adjust the width and height as needed,
+        y: Math.random() * (canvas.height - 100) + 50, // Adjust the width and height as needed,
+    };
+}
+
+// Utility function to interpolate between three colors
+function getInterpolatedColor(value, min, max, lowColour, correctColour, highColour) {
+    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+    value = clamp(value, min, max);
+
+    if (value < 0) {
+        const ratio = (value - min) / (-min);
+        return interpolateColor(lowColour, correctColour, ratio);
+    } else {
+        const ratio = value / max;
+        return interpolateColor(correctColour, highColour, ratio);
+    }
+}
+
+// Utility function to interpolate between two colors
+function interpolateColor(color1, color2, ratio) {
+    const hexToRgb = (hex) => {
+        const bigint = parseInt(hex.slice(1), 16);
+        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+    };
+
+    const rgbToHex = (r, g, b) =>
+        `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+
+    const [r1, g1, b1] = hexToRgb(color1);
+    const [r2, g2, b2] = hexToRgb(color2);
+
+    const r = Math.round(r1 + (r2 - r1) * ratio);
+    const g = Math.round(g1 + (g2 - g1) * ratio);
+    const b = Math.round(b1 + (b2 - b1) * ratio);
+
+    return rgbToHex(r, g, b);
 }
 
 // Example usage

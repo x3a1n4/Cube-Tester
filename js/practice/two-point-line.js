@@ -1,96 +1,75 @@
-// Function to generate a random point within the canvas
-function generateRandomPoint() {
-    return {
-        x: Math.random() * (canvas.width - 250) + 250,
-        y: Math.random() * canvas.height,
-    };
-}
+let point1 = null;
+let point2 = null;
 
 export function startPracticeMode() {
     // Generate two random points
-    const point1 = generateRandomPoint();
-    const point2 = generateRandomPoint();
+    point1 = generateRandomPoint();
+    point2 = generateRandomPoint();
 
     // Draw the two points
     drawPoint(point1.x, point1.y, 'red', 8);
     drawPoint(point2.x, point2.y, 'red', 8);
+}
 
-    // Wait for the user to draw a line
-    let isDrawing = false;
-    let userLine = [];
+let userLine = [];
 
-    canvas.addEventListener('mousedown', () => {
-        isDrawing = true;
-        userLine = [];
-    });
+export function handlePointerDown(e) {
+    // Start drawing
+    userLine = [];
+}
 
-    canvas.addEventListener('mouseup', () => {
-        isDrawing = false;
+export function handlePointerMove(e) {
+    if (!isDrawing) return; // Check if the user is drawing
 
-        // Draw a dashed line between the two points
-        ctx.setLineDash([5, 5]);
-        drawLine(point1.x, point1.y, point2.x, point2.y, 'blue', 2);
-        ctx.setLineDash([]);
+    // Track the user's line
+    userLine.push({ x: e.offsetX, y: e.offsetY });
+}
 
-        // Analyze the user's line
-        const userStart = userLine[0];
-        const userEnd = userLine[userLine.length - 1];
-        const userSlope = (userEnd.y - userStart.y) / (userEnd.x - userStart.x);
+export function handlePointerUp(e) {
+    // Stop drawing
+
+    // Draw a dashed line between the two points
+    ctx.setLineDash([5, 5]);
+    drawLine(point1.x, point1.y, point2.x, point2.y, 'blue', 2);
+    ctx.setLineDash([]);
+
+    console.log('User line:', userLine);
+    console.log('Point 1:', point1);
+    console.log('Point 2:', point2);
+
+    // Analyze the user's line and provide feedback
+    // Calculate the maximum and minimum deviation
+    let maxDeviation = 0;
+
+    userLine.forEach((point) => {
         const correctSlope = (point2.y - point1.y) / (point2.x - point1.x);
+        const expectedY = point1.y + correctSlope * (point.x - point1.x);
+        const deviation = Math.abs(point.y - expectedY);
 
-        // Recolor the user's line based on its deviation
-        userLine.forEach((point, index) => {
-            if (index === 0) return; // Skip the first point
-            const prevPoint = userLine[index - 1];
-
-            const expectedY = point1.y + correctSlope * (point.x - point1.x);
-            const deviation = point.y - expectedY;
-
-            const color = getInterpolatedColor(deviation, -10, 10, 'red', 'green', 'blue');
-            drawLine(prevPoint.x, prevPoint.y, point.x, point.y, color, 3);
-        });
-
-        // Print results
-        const result = Math.abs(userSlope - correctSlope) < 0.1 ? 'Correct!' : 'Try again!';
-        updateFloatingInfo(`Result: ${result}`);
+        if (deviation > maxDeviation) {
+            maxDeviation = deviation;
+        }
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-        if (!isDrawing) return;
-        userLine.push({ x: e.offsetX, y: e.offsetY });
-    });
-}
-
-// Utility function to interpolate between three colors
-function getInterpolatedColor(value, min, max, lowColour, correctColour, highColour) {
-    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
-    value = clamp(value, min, max);
-
-    if (value < 0) {
-        const ratio = (value - min) / (0 - min);
-        return interpolateColor(lowColour, correctColour, ratio);
-    } else {
-        const ratio = value / max;
-        return interpolateColor(correctColour, highColour, ratio);
+    // Limit the maximum deviation to 100 pixels
+    const totalMaxDeviation = maxDeviation;
+    if (maxDeviation > 100) {
+        maxDeviation = 100;
     }
-}
 
-// Utility function to interpolate between two colors
-function interpolateColor(color1, color2, ratio) {
-    const hexToRgb = (hex) => {
-        const bigint = parseInt(hex.slice(1), 16);
-        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-    };
+    // Analyze the user's line and recolor it
+    userLine.forEach((point, index) => {
+        if (index === 0) return; // Skip the first point
+        const prevPoint = userLine[index - 1];
 
-    const rgbToHex = (r, g, b) =>
-        `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        const correctSlope = (point2.y - point1.y) / (point2.x - point1.x);
+        const expectedY = point1.y + correctSlope * (point.x - point1.x);
+        const deviation = point.y - expectedY;
 
-    const [r1, g1, b1] = hexToRgb(color1);
-    const [r2, g2, b2] = hexToRgb(color2);
+        const color = getInterpolatedColor(deviation, -maxDeviation, maxDeviation, '#ff0000', '#00ff00', '#0000ff');
+        drawLine(prevPoint.x, prevPoint.y, point.x, point.y, color, 3);
+    });
 
-    const r = Math.round(r1 + (r2 - r1) * ratio);
-    const g = Math.round(g1 + (g2 - g1) * ratio);
-    const b = Math.round(b1 + (b2 - b1) * ratio);
-
-    return rgbToHex(r, g, b);
+    // Print results
+    updateFloatingInfo(`Practice mode complete! Max deviation: ${totalMaxDeviation.toFixed(2)} px`);
 }
