@@ -1,0 +1,135 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+}
+
+header {
+    background: #35424a;
+    color: #ffffff;
+    padding: 10px 0;
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+}
+
+nav {
+    width: 250px; /* Increased width by 50px */
+    background-color: #f4f4f4;
+    padding: 10px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+nav button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+nav button:hover {
+    background-color: #0056b3;
+}
+
+button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chevron {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-image: url('../resources/angle-double-small-right.svg');
+    background-size: cover;
+    transition: transform 0.3s ease; /* Smooth rotation */
+}
+
+button.open .chevron {
+    transform: rotate(90deg); /* Rotate 90 degrees clockwise */
+}
+
+.submenu {
+    /* padding-left: 10px; */
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.1s ease-out;
+}
+
+.submenu button {
+    background-color: #e7e7e7;
+    color: black;
+    margin-bottom: 5px;
+    position: relative; /* Required for left margin animation */
+    transition: transform 0.3s ease, background-color 0.3s ease; /* Smooth animation */
+    width: calc(100% - 30px); /* Reduce width by 30px to account for movement */
+}
+
+.submenu button:hover {
+    background-color: #d6d6d6;
+}
+
+.submenu button.selected {
+    transform: translateX(30px); /* Move the button 30px to the right */
+    background-color: var(--selected-colour, #e7e7e7); /* Default fallback */
+}
+
+.settings-icon {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 30px;
+    height: 30px;
+    background-image: url('../resources/settings.svg'); /* Replace with your settings icon path */
+    background-size: cover;
+    opacity: 0; /* Initially hidden */
+    transition: opacity 0.3s ease; /* Smooth fade-in effect */
+}
+
+.floating-info {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black background */
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    z-index: 1000; /* Ensure it appears above other elements */
+    display: none; /* Initially hidden */
+}
+
+#drawing-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw; /* Full viewport width */
+    height: 100vh; /* Full viewport height */
+    z-index: -1; /* Place it behind other elements */
+    background-color: #ffffff; /* Optional: Set a background color */
+}
