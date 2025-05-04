@@ -95,6 +95,65 @@ function generateRandomPoint() {
     };
 }
 
+function point_inside_polygon(point, vs) {
+    // ray-casting algorithm based on
+    // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+    
+    var x = point[0], y = point[1];
+    
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+        
+        var intersect = ((yi > y) != (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    
+    return inside;
+};
+
+const minDistance = canvas.width * 0.1; // Minimum distance between points
+function generateRandomPointSet(n, forceConvex = false) {
+    const points = [];
+    for (let i = 0; i < n; i++) {
+        // ensure points are not too close to each other
+        let point = generateRandomPoint();
+
+        let pointTooClose = points.some(p => Math.abs(p.x - point.x) < minDistance && Math.abs(p.y - point.y) < minDistance);
+        let pointInConvexHull = true;
+        if (forceConvex) {
+            // Check if the point is inside the convex hull of the existing points
+            pointInConvexHull = point_inside_polygon([point.x, point.y], points.map(p => [p.x, p.y]));
+        }
+
+        if (pointTooClose || pointInConvexHull) {
+            i--; // decrement i to retry this iteration
+            continue;
+        }
+        points.push(point);
+    }
+
+    if (forceConvex) {
+        // if any points are inside the convex hull, restart
+        if (points.some(p => point_inside_polygon([p.x, p.y], points.map(p => [p.x, p.y]).filter((_, i) => i !== points.indexOf(p))))) {
+            // restart the function to generate a new set of points
+            return generateRandomPointSet(n, forceConvex);
+        }
+    }
+    return points;
+}
+
+// return the distance from a point to a line defined by two points
+function getDistanceFromLine(point, lineStart, lineEnd) {
+    const A = lineEnd.y - lineStart.y;
+    const B = lineEnd.x - lineStart.x;
+    const C = lineEnd.x * lineStart.y - lineEnd.y * lineStart.x;
+
+    return (A * point.x - B * point.y + C) / Math.sqrt(A * A + B * B);
+}
+
 // Utility function to interpolate between three colors
 function getInterpolatedColor(value, min, max, lowColour, correctColour, highColour) {
     const clamp = (num, min, max) => Math.min(Math.max(num, min), max);

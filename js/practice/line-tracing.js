@@ -7,8 +7,7 @@ export function startPracticeMode() {
     point2 = generateRandomPoint();
 
     // Draw the two points
-    drawPoint(point1.x, point1.y, 'red', 8);
-    drawPoint(point2.x, point2.y, 'red', 8);
+    drawLine(point1.x, point1.y, point2.x, point2.y, 'red', 8);
 }
 
 let userLine = [];

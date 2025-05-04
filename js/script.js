@@ -37,10 +37,6 @@ canvas.addEventListener('pointerup', (e) => {
     if (currentPracticeModule && currentPracticeModule.handlePointerUp) {
         currentPracticeModule.handlePointerUp(e);
     }
-
-    // Show the restart button
-    const restartButton = document.getElementById('restart-button');
-    restartButton.style.display = 'block';
 });
 
 // Handle submenu button clicks
