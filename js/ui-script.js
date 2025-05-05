@@ -1,6 +1,3 @@
-let currentPracticeMode = null; // Store the current practice mode
-let currentPracticeModule = null; // Store the currently loaded practice module
-
 function toggleSubmenu(id) {
     const submenu = document.getElementById(id);
     const button = submenu.previousElementSibling; // Get the button that toggled this submenu
@@ -17,27 +14,6 @@ function toggleSubmenu(id) {
         button.classList.add('open'); // Add the 'open' class to rotate the chevron
     }
 }
-
-const canvas = document.getElementById('drawing-canvas');
-
-// Add event listeners for practice module interactions
-canvas.addEventListener('pointerdown', (e) => {
-    if (currentPracticeModule && currentPracticeModule.handlePointerDown) {
-        currentPracticeModule.handlePointerDown(e);
-    }
-});
-
-canvas.addEventListener('pointermove', (e) => {
-    if (currentPracticeModule && currentPracticeModule.handlePointerMove) {
-        currentPracticeModule.handlePointerMove(e);
-    }
-});
-
-canvas.addEventListener('pointerup', (e) => {
-    if (currentPracticeModule && currentPracticeModule.handlePointerUp) {
-        currentPracticeModule.handlePointerUp(e);
-    }
-});
 
 // Handle submenu button clicks
 document.querySelectorAll('.submenu button').forEach(button => {
@@ -75,29 +51,6 @@ document.querySelectorAll('.submenu button').forEach(button => {
 
         loadPracticeMode(currentPracticeMode);
     });
-});
-
-function loadPracticeMode(practiceMode) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-
-    import(`./practice/${practiceMode}.js`)
-        .then(module => {
-            currentPracticeModule = module; // Store the loaded module
-            if (module.startPracticeMode) {
-                module.startPracticeMode(); // Call the startPracticeMode function from the module
-            }
-        })
-        .catch(err => {
-            console.error(`Failed to load practice mode: ${practiceMode}`, err);
-            updateFloatingInfo(`Error: Could not start practice mode for "${practiceMode}"`);
-        });
-}
-
-// Restart the current practice mode when any key is pressed
-document.addEventListener('keydown', () => {
-    if (currentPracticeMode) {
-        loadPracticeMode(currentPracticeMode); // Restart the practice mode
-    }
 });
 
 function updateFloatingInfo(text) {

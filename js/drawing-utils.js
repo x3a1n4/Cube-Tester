@@ -1,5 +1,4 @@
 // const canvas = document.getElementById('drawing-canvas');
-const ctx = canvas.getContext('2d');
 
 // Resize the canvas to fit the window
 function resizeCanvas() {
@@ -114,7 +113,6 @@ function point_inside_polygon(point, vs) {
     return inside;
 };
 
-const minDistance = canvas.width * 0.1; // Minimum distance between points
 function generateRandomPointSet(n, forceConvex = false) {
     const points = [];
     for (let i = 0; i < n; i++) {
@@ -153,6 +151,40 @@ function getDistanceFromLine(point, lineStart, lineEnd) {
 
     return (A * point.x - B * point.y + C) / Math.sqrt(A * A + B * B);
 }
+
+// draw the deviation from the line on the canvas
+// returns the maximum deviation, as an absolute value
+function displayDeviationFromLine(userPoints, lineStart, lineEnd) {
+    let maxDeviation = 0;
+
+    userPoints.forEach((point) => {
+        const deviation = Math.abs(getDistanceFromLine(point, lineStart, lineEnd));
+
+        if (deviation > maxDeviation) {
+            maxDeviation = deviation;
+        }
+    });
+
+    // Limit the maximum deviation to 100 pixels
+    const totalMaxDeviation = maxDeviation;
+    if (maxDeviation > 100) {
+        maxDeviation = 100;
+    }
+
+    // Analyze the user's line and recolor it
+    userPoints.forEach((point, index) => {
+        if (index === 0) return; // Skip the first point
+        const prevPoint = userPoints[index - 1];
+
+        const deviation = getDistanceFromLine(point, lineStart, lineEnd);
+
+        const color = getInterpolatedColor(deviation, -maxDeviation, maxDeviation, '#ff0000', '#00ff00', '#0000ff');
+        drawLine(prevPoint.x, prevPoint.y, point.x, point.y, color, 3);
+    });
+
+    return totalMaxDeviation
+}
+
 
 // Utility function to interpolate between three colors
 function getInterpolatedColor(value, min, max, lowColour, correctColour, highColour) {
