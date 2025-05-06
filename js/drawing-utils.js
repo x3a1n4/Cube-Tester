@@ -1,10 +1,9 @@
-// const canvas = document.getElementById('drawing-canvas');
-
 // Resize the canvas to fit the window
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    Globals.canvas.width = window.innerWidth;
+    Globals.canvas.height = window.innerHeight;
 }
+
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
@@ -15,24 +14,26 @@ let lastY = 0;
 let isBrushTextureLoaded = false; // Flag to check if the brush texture is loaded
 
 // Brush texture (optional)
+/*
 const brushTexture = new Image();
 brushTexture.src = '../resources/brush-texture.png'; // Replace with your brush texture file path
 brushTexture.onload = () => {
     isBrushTextureLoaded = true; // Set the flag to true when the image is loaded
 };
+*/
 
 // Start drawing
-canvas.addEventListener('pointerdown', (e) => {
+Globals.canvas.addEventListener('pointerdown', (e) => {
     isDrawing = true;
     [lastX, lastY] = [e.offsetX, e.offsetY];
 });
 
 // Stop drawing
-canvas.addEventListener('pointerup', () => (isDrawing = false));
-canvas.addEventListener('pointerleave', () => (isDrawing = false));
+Globals.canvas.addEventListener('pointerup', () => (isDrawing = false));
+Globals.canvas.addEventListener('pointerleave', () => (isDrawing = false));
 
 // Draw on the canvas
-canvas.addEventListener('pointermove', (e) => {
+Globals.canvas.addEventListener('pointermove', (e) => {
     if (!isDrawing) return;
 
     if (isBrushTextureLoaded && false) { // not in use, TODO
@@ -41,34 +42,239 @@ canvas.addEventListener('pointermove', (e) => {
 
     } else {
         // Default smooth line drawing
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(e.offsetX, e.offsetY);
-        ctx.strokeStyle = 'black'; // Default brush color
-        ctx.lineWidth = 5; // Default brush size
-        ctx.lineCap = 'round'; // Smooth line ends
-        ctx.stroke();
+        Globals.ctx.beginPath();
+        Globals.ctx.moveTo(lastX, lastY);
+        Globals.ctx.lineTo(e.offsetX, e.offsetY);
+        Globals.ctx.strokeStyle = 'black'; // Default brush color
+        Globals.ctx.lineWidth = 5; // Default brush size
+        Globals.ctx.lineCap = 'round'; // Smooth line ends
+        Globals.ctx.stroke();
     }
 
     [lastX, lastY] = [e.offsetX, e.offsetY];
 });
 
-// Utility method to draw a line
-function drawLine(x1, y1, x2, y2, color = 'black', width = 2) {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.stroke();
+class Colour{
+    // Utility function to interpolate between two colors
+    static interpolateColor(color1, color2, ratio) {
+        const hexToRgb = (hex) => {
+            const bigint = parseInt(hex.slice(1), 16);
+            return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+        };
+
+        const rgbToHex = (r, g, b) =>
+            `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+
+        const [r1, g1, b1] = hexToRgb(color1);
+        const [r2, g2, b2] = hexToRgb(color2);
+
+        const r = Math.round(r1 + (r2 - r1) * ratio);
+        const g = Math.round(g1 + (g2 - g1) * ratio);
+        const b = Math.round(b1 + (b2 - b1) * ratio);
+
+        return rgbToHex(r, g, b);
+    }
+
+    // Utility function to interpolate between three colors
+    static getInterpolatedColor(value, min, max, lowColour, correctColour, highColour) {
+        const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+        value = clamp(value, min, max);
+
+        if (value < 0) {
+            const ratio = (value - min) / (-min);
+            return Colour.interpolateColor(lowColour, correctColour, ratio);
+        } else {
+            const ratio = value / max;
+            return Colour.interpolateColor(correctColour, highColour, ratio);
+        }
+    }
 }
 
-// Utility method to draw a point
-function drawPoint(x, y, color = 'red', size = 5) {
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
+// class for handling points
+class Point{
+    #x; #y;
+    constructor(x, y) {
+        this.#x = x;
+        this.#y = y;
+    }
+
+    get x() { return this.#x; };
+    get y() { return this.#y; };
+
+    draw(color = 'red', size = 5) {
+        Globals.ctx.beginPath();
+        Globals.ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+        Globals.ctx.fillStyle = color;
+        Globals.ctx.fill();
+    }
+
+    getDistance(point) {
+        const out = Math.sqrt(Math.pow(this.x - point.x, 2) + Math.pow(this.y - point.y, 2));
+        return out;
+    }
+
+    // determine whether point is inside polygon (passed as array of Points)
+    isInsidePolygon(vs) {
+        // ray-casting algorithm based on
+        // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+        
+        var inside = false;
+        for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+            var xi = vs[i].x, yi = vs[i].y;
+            var xj = vs[j].x, yj = vs[j].y;
+            
+            var intersect = ((yi > this.y) != (yj > this.y))
+                && (this.x < (xj - xi) * (this.y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        
+        return inside;
+    };
+
+    // generate random point that is visible on canvas
+    static generateRandomPoint() {
+        return new Point(
+            Math.random() * (Globals.canvas.width - 350) + 300,
+            Math.random() * (Globals.canvas.height - 100) + 50
+        );
+    };
+    
+    // generate n random points
+    // forceConvex: whether to generate a convex hull
+    static generateRandomPointSet(n, forceConvex = false) {
+        const points = [];
+        for (let i = 0; i < n; i++) {
+            // ensure points are not too close to each other
+            let point = Point.generateRandomPoint();
+
+            // ensure not too close
+            let pointTooClose = points.some(p => point.getDistance(p) < Globals.minPointGenerationDistance); // stops here
+
+            // check convex hull
+            let pointInConvexHull = false;
+            if (forceConvex) {
+                // Check if the point is inside the convex hull of the existing points
+                pointInConvexHull = point.isInsidePolygon(points);
+            }
+
+            if (pointTooClose || pointInConvexHull) {
+                i--; // decrement i to retry this iteration
+                continue;
+            }
+
+            points.push(point);
+        }
+
+        // check if we've made a convex hull
+        if (forceConvex) {
+            // if any points are inside the convex hull, restart
+            if (points.some(p => p.isInsidePolygon(points.filter((_, i) => i !== points.indexOf(p))))) {
+                // restart the function to generate a new set of points
+                return Point.generateRandomPointSet(n, forceConvex);
+            }
+        }
+
+        return points;
+    }
+}
+
+// class for handling lines
+class Line {
+    #startPoint; #endPoint;
+    constructor(startPoint, endPoint) {
+        this.#startPoint = startPoint;
+        this.#endPoint = endPoint;
+    }
+
+    get startPoint() { return this.#startPoint; };
+    get endPoint() { return this.#endPoint; };
+
+    draw(color = 'black', width = 2) {
+        Globals.ctx.beginPath();
+        Globals.ctx.moveTo(this.startPoint.x, this.startPoint.y);
+        Globals.ctx.lineTo(this.endPoint.x, this.endPoint.y);
+        Globals.ctx.strokeStyle = color;
+        Globals.ctx.lineWidth = width;
+        Globals.ctx.stroke();
+    }
+
+    drawDashed(color = 'black', width = 2) {
+        Globals.ctx.setLineDash([5, 5]);
+        this.draw(color, width);
+        Globals.ctx.setLineDash([]);
+    }
+
+    getLength(){
+        return this.startPoint.getDistance(this.endPoint);
+    }
+
+    // Return the distance from a point to a line
+    getDistanceFromLine(point) {
+        const A = this.endPoint.y - this.startPoint.y;
+        const B = this.endPoint.x - this.startPoint.x;
+        const C = this.endPoint.x * this.startPoint.y - this.endPoint.y * this.startPoint.x;
+
+        return (A * point.x - B * point.y + C) / Math.sqrt(A * A + B * B);
+    }
+
+    // Get intersection between this line and another, unbounded
+    getIntersection(line) {
+        const x1 = this.#startPoint.x;
+        const y1 = this.#startPoint.y;
+        const x2 = this.#endPoint.x;
+        const y2 = this.#endPoint.y;
+
+        const x3 = line.startPoint.x;
+        const y3 = line.startPoint.y;
+        const x4 = line.endPoint.x;
+        const y4 = line.endPoint.y;
+    
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        if (denom === 0) return null; // Lines are parallel
+    
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+    
+        //if (ua < 0 || ua > 1 || ub < 0 || ub > 1) return null; // Intersection is outside the line segments
+    
+        const intersectionX = x1 + ua * (x2 - x1);
+        const intersectionY = y1 + ua * (y2 - y1);
+    
+        return Point(intersectionX, intersectionY); // { x: intersectionX, y: intersectionY };
+    }
+
+    // draw the deviation from the line on the canvas
+    // returns the maximum deviation, as an absolute value
+    displayDeviationFromLine(userPoints) {
+        let maxDeviation = 0;
+
+        userPoints.forEach((point) => {
+            const deviation = Math.abs(this.getDistanceFromLine(point));
+
+            if (deviation > maxDeviation) {
+                maxDeviation = deviation;
+            }
+        });
+
+        // Limit the maximum deviation to 100 pixels
+        const totalMaxDeviation = maxDeviation;
+        if (maxDeviation > 100) {
+            maxDeviation = 100;
+        }
+
+        // Analyze the user's line and recolor it
+        userPoints.forEach((point, index) => {
+            if (index === 0) return; // Skip the first point
+            const prevPoint = userPoints[index - 1];
+
+            const deviation = this.getDistanceFromLine(point);
+
+            const color = Colour.getInterpolatedColor(deviation, -maxDeviation, maxDeviation, '#ff0000', '#00ff00', '#0000ff');
+            new Line(prevPoint, point).draw(color, 3);
+        });
+
+        return totalMaxDeviation
+    }
 }
 
 // Utility method to draw an ellipse
@@ -79,149 +285,3 @@ function drawEllipse(x, y, radiusX, radiusY, rotation = 0, color = 'blue', width
     ctx.lineWidth = width;
     ctx.stroke();
 }
-
-// Utility method to draw a plane (rectangle)
-function drawPlane(x, y, width, height, color = 'rgba(0, 0, 255, 0.2)') {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, width, height);
-}
-
-// Function to generate a random point within the canvas
-function generateRandomPoint() {
-    return {
-        x: Math.random() * (canvas.width - 350) + 300, // Adjust the width and height as needed,
-        y: Math.random() * (canvas.height - 100) + 50, // Adjust the width and height as needed,
-    };
-}
-
-function point_inside_polygon(point, vs) {
-    // ray-casting algorithm based on
-    // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
-    
-    var x = point[0], y = point[1];
-    
-    var inside = false;
-    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-        var xi = vs[i][0], yi = vs[i][1];
-        var xj = vs[j][0], yj = vs[j][1];
-        
-        var intersect = ((yi > y) != (yj > y))
-            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-    }
-    
-    return inside;
-};
-
-function generateRandomPointSet(n, forceConvex = false) {
-    const points = [];
-    for (let i = 0; i < n; i++) {
-        // ensure points are not too close to each other
-        let point = generateRandomPoint();
-
-        let pointTooClose = points.some(p => Math.abs(p.x - point.x) < minDistance && Math.abs(p.y - point.y) < minDistance);
-        let pointInConvexHull = true;
-        if (forceConvex) {
-            // Check if the point is inside the convex hull of the existing points
-            pointInConvexHull = point_inside_polygon([point.x, point.y], points.map(p => [p.x, p.y]));
-        }
-
-        if (pointTooClose || pointInConvexHull) {
-            i--; // decrement i to retry this iteration
-            continue;
-        }
-        points.push(point);
-    }
-
-    if (forceConvex) {
-        // if any points are inside the convex hull, restart
-        if (points.some(p => point_inside_polygon([p.x, p.y], points.map(p => [p.x, p.y]).filter((_, i) => i !== points.indexOf(p))))) {
-            // restart the function to generate a new set of points
-            return generateRandomPointSet(n, forceConvex);
-        }
-    }
-    return points;
-}
-
-// return the distance from a point to a line defined by two points
-function getDistanceFromLine(point, lineStart, lineEnd) {
-    const A = lineEnd.y - lineStart.y;
-    const B = lineEnd.x - lineStart.x;
-    const C = lineEnd.x * lineStart.y - lineEnd.y * lineStart.x;
-
-    return (A * point.x - B * point.y + C) / Math.sqrt(A * A + B * B);
-}
-
-// draw the deviation from the line on the canvas
-// returns the maximum deviation, as an absolute value
-function displayDeviationFromLine(userPoints, lineStart, lineEnd) {
-    let maxDeviation = 0;
-
-    userPoints.forEach((point) => {
-        const deviation = Math.abs(getDistanceFromLine(point, lineStart, lineEnd));
-
-        if (deviation > maxDeviation) {
-            maxDeviation = deviation;
-        }
-    });
-
-    // Limit the maximum deviation to 100 pixels
-    const totalMaxDeviation = maxDeviation;
-    if (maxDeviation > 100) {
-        maxDeviation = 100;
-    }
-
-    // Analyze the user's line and recolor it
-    userPoints.forEach((point, index) => {
-        if (index === 0) return; // Skip the first point
-        const prevPoint = userPoints[index - 1];
-
-        const deviation = getDistanceFromLine(point, lineStart, lineEnd);
-
-        const color = getInterpolatedColor(deviation, -maxDeviation, maxDeviation, '#ff0000', '#00ff00', '#0000ff');
-        drawLine(prevPoint.x, prevPoint.y, point.x, point.y, color, 3);
-    });
-
-    return totalMaxDeviation
-}
-
-
-// Utility function to interpolate between three colors
-function getInterpolatedColor(value, min, max, lowColour, correctColour, highColour) {
-    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
-    value = clamp(value, min, max);
-
-    if (value < 0) {
-        const ratio = (value - min) / (-min);
-        return interpolateColor(lowColour, correctColour, ratio);
-    } else {
-        const ratio = value / max;
-        return interpolateColor(correctColour, highColour, ratio);
-    }
-}
-
-// Utility function to interpolate between two colors
-function interpolateColor(color1, color2, ratio) {
-    const hexToRgb = (hex) => {
-        const bigint = parseInt(hex.slice(1), 16);
-        return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-    };
-
-    const rgbToHex = (r, g, b) =>
-        `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-
-    const [r1, g1, b1] = hexToRgb(color1);
-    const [r2, g2, b2] = hexToRgb(color2);
-
-    const r = Math.round(r1 + (r2 - r1) * ratio);
-    const g = Math.round(g1 + (g2 - g1) * ratio);
-    const b = Math.round(b1 + (b2 - b1) * ratio);
-
-    return rgbToHex(r, g, b);
-}
-
-// Example usage
-// drawLine(50, 50, 200, 200);
-// drawPoint(100, 100);
-// drawEllipse(300, 300, 50, 30);
-// drawPlane(400, 400, 100, 50);

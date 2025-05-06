@@ -43,13 +43,10 @@ document.querySelectorAll('.submenu button').forEach(button => {
         settingsIcon.style.left = `${buttonRect.left - navRect.left - 5}px`; // Add some margin
         settingsIcon.style.opacity = 1; // Make the icon visible
 
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         // Dynamically load and execute the respective practice mode
-        currentPracticeMode = button.textContent.trim().toLowerCase().replace(/\s+/g, '-'); // Convert button text to file name
+        PracticeInfo.currentPracticeMode = button.textContent.trim().toLowerCase().replace(/\s+/g, '-'); // Convert button text to file name
 
-        loadPracticeMode(currentPracticeMode);
+        PracticeInfo.loadPracticeMode(PracticeInfo.currentPracticeMode);
     });
 });
 
