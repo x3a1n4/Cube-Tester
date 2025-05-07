@@ -176,6 +176,16 @@ class Point{
 
         return points;
     }
+
+    static getCentroid(points) {
+        let x = 0;
+        let y = 0;
+        for (const point of points) {
+            x += point.x;
+            y += point.y;
+        }
+        return { x: x / points.length, y: y / points.length };
+    }
 }
 
 // class for handling lines

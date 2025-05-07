@@ -13,22 +13,11 @@ export function handlePointerUp(e) {
         return; // Only allow up to 12 strokes
     }
 
+    const drawnCube = new DrawnCube(PracticeInfo.userLines);
+
     // draw deviation
-    let totalMaxDeviation = 0;
-    userLines.forEach(userLine => {
-        // Get the start and ending points of the each line segment
-        const startPoint = userLine[0];
-        const endPoint = userLine[userLine.length - 1];
+    let totalMaxDeviation = drawnCube.drawDeviation();
 
-        // Draw the derivation
-        const maxDeviation = displayDeviationFromLine(userLine, startPoint, endPoint);
-
-        // Limit the maximum deviation to 100 pixels
-        if (maxDeviation > totalMaxDeviation) {
-            totalMaxDeviation = maxDeviation;
-        }
-    });
-    
     // Initialize userLineConnections, of format {userLine: [connectedLines]}
     userLines.forEach(userLine => {
         userLineConnections[userLine] = [];
@@ -170,12 +159,3 @@ function getLineEndpointMinDistance(line1, line2) {
 }
 
 // code to calculate centroid of list of points
-function getCentroid(points) {
-    let x = 0;
-    let y = 0;
-    for (const point of points) {
-        x += point.x;
-        y += point.y;
-    }
-    return { x: x / points.length, y: y / points.length };
-}
