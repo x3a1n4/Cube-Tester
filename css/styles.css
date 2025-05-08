@@ -135,3 +135,16 @@ button.open .chevron {
     z-index: -1; /* Place it behind other elements */
     background-color: #ffffff; /* Optional: Set a background color */
 }
+
+/* TODO: add container to nav, make it flex */
+#dev-warning-container {
+    display: flex;
+    align-items: flex-end;
+}
+
+#dev-warning {
+    align-self: flex-end;
+    color: #111111;
+    padding: 0px 3px;
+    font-size: 14px;
+}
