@@ -181,10 +181,13 @@ class Point{
         let x = 0;
         let y = 0;
         for (const point of points) {
+            if (!point) { // handle nulls
+                continue;
+            }
             x += point.x;
             y += point.y;
         }
-        return { x: x / points.length, y: y / points.length };
+        return new Point(x / points.length, y / points.length);
     }
 }
 
@@ -227,6 +230,19 @@ class Line {
         return (A * point.x - B * point.y + C) / Math.sqrt(A * A + B * B);
     }
 
+    // return line that spans entire width of canvas
+    // while keeping the current line
+    getExtendedLine() {
+        const slope = (this.endPoint.y - this.startPoint.y) / (this.endPoint.x - this.startPoint.x);
+        const intercept = this.startPoint.y - slope * this.startPoint.x;
+        const x1 = 0;
+        const y1 = slope * x1 + intercept;
+        const x2 = Globals.canvas.width;
+        const y2 = slope * x2 + intercept;
+
+        return new Line(new Point(x1, y1), new Point(x2, y2));
+    }
+
     // Get intersection between this line and another, unbounded
     getIntersection(line) {
         const x1 = this.#startPoint.x;
@@ -250,7 +266,7 @@ class Line {
         const intersectionX = x1 + ua * (x2 - x1);
         const intersectionY = y1 + ua * (y2 - y1);
     
-        return Point(intersectionX, intersectionY); // { x: intersectionX, y: intersectionY };
+        return new Point(intersectionX, intersectionY); // { x: intersectionX, y: intersectionY };
     }
 
     // draw the deviation from the line on the canvas
@@ -284,6 +300,71 @@ class Line {
         });
 
         return totalMaxDeviation
+    }
+}
+
+// class for connected lines, for cube drawing
+// where the line is connected to other lines at a vertex
+class ConnectedLine extends Line{
+    static #allLines = []; // all lines of this type
+    #connectedLines = []; // lines connected to this line
+    #axis = -1;
+
+    constructor(startPoint, endPoint) {
+        super(startPoint, endPoint);
+
+        ConnectedLine.#allLines.push(this);
+    }
+
+    get allLines() { return ConnectedLine.#allLines; }
+    get connectedLines() { return this.#connectedLines; }
+    get axis() { return this.#axis; }
+
+    clearAllLines() { ConnectedLine.#allLines = []; } // clear lines
+
+    getMinDistanceFromEndpoint(otherLine) {
+        const otherStart = otherLine.startPoint;
+        const otherEnd = otherLine.endPoint;
+
+        return Math.min(
+            this.startPoint.getDistance(otherStart),
+            this.startPoint.getDistance(otherEnd),
+            this.endPoint.getDistance(otherStart),
+            this.endPoint.getDistance(otherEnd)
+        );
+    }
+
+    // connects the n closest lines
+    getClosestLines(n) {
+        this.#connectedLines = ConnectedLine.#allLines.filter((line) => line !== this) // remove self
+            .sort((a, b) => a.getMinDistanceFromEndpoint(this) - b.getMinDistanceFromEndpoint(this)) // sort by distance
+            .slice(0, n); // slice
+    }
+
+    // connects all lines closer than distance, in pixels
+    getClosestLinesByDistance(distance) {
+        this.#connectedLines = ConnectedLine.#allLines.filter((line) => line !== this) // remove self
+            .filter((line) => line.getMinDistanceFromEndpoint(this) < distance); // filter by distance
+    }
+
+    // determine the parallel lines in a rectangle
+    // set line to axis, then get all other parallel lines and set them to axis
+    getOppositeLinesInQuadrilateral(axis) {
+        this.#axis = axis;
+        // trace lines
+        for(const adjacentLine1 of this.connectedLines) {
+            for(const adjacentLine2 of adjacentLine1.connectedLines.filter((line) => line !== this)) {
+                for(const adjacentLine3 of adjacentLine2.connectedLines.filter((line) => line !== adjacentLine1)) {
+                    if(adjacentLine3.connectedLines.includes(this)) {
+                        // found a rectangle
+                        // so adjacentLine2 is parallel to self
+                        if(adjacentLine2.axis === -1) {
+                            adjacentLine2.getOppositeLinesInQuadrilateral(axis);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
