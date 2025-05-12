@@ -27,7 +27,7 @@ export function handlePointerUp(e) {
 
     // get connected lines
     for(const connectedUserLine of connectedUserLines) {
-        connectedUserLine.getClosestLines(4);
+        connectedUserLine.getClosestLines(4); // TODO: make it get two from each end rather than four total
     }
 
     // get lines
